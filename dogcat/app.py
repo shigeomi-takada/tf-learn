@@ -104,7 +104,7 @@ def cnn_model_fn(features, labels, mode):
 
     # 2値分類の場合はhinge_lossが良い
     loss = tf.reduce_mean(
-        tf.losses.sigmoid_cross_entropy(onehot_labels, logits))
+        tf.losses.softmax_cross_entropy(onehot_labels, logits))
 
     if mode == tf.estimator.ModeKeys.TRAIN:
         # オプティマイザー。最適なモデルのパラメータを見つけるためのアルゴリズム
@@ -130,13 +130,15 @@ def cnn_model_fn(features, labels, mode):
 
 def main(unused_argv=None):
 
+    model_dir = '../models/dogcat'
+
     input = Input()
 
     data = input.get()
 
     # Estimatorのインスタンス化
     classifier = tf.estimator.Estimator(
-        model_fn=cnn_model_fn, model_dir='../models/dogcat')
+        model_fn=cnn_model_fn, model_dir=model_dir)
 
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
