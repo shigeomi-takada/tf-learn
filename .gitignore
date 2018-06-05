@@ -8,5 +8,3 @@ logs/
 tmp*.py
 #models/
 !models/.keep
-datasets/
-!datasets/.keep
