@@ -6,5 +6,6 @@ tests/__pycache__/
 logs/
 !logs/.gitkeep
 tmp*.py
-#models/
+models/
 !models/.keep
+datasets/
