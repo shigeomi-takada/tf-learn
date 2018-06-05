@@ -58,7 +58,10 @@ class Input:
         # [1, height, width, channels] こういう形になる
         #img = tf.expand_dims(img, 0)
 
-        return img, label
+        if label is None:
+            return img
+        else:
+            return img, label
 
     def input_fn(self, filenames, labels):
         ''''''
@@ -87,15 +90,22 @@ class Input:
         # batch_size分ずつ取得して返す
         return iterator.get_next()
 
-    def eval_input_fn(self, filenames, labels):
+    def eval_input_fn(self, filenames, labels=None):
         '''
         evaluationとpredictの場合はeval_input_fnを呼び出す
         evaluationとpredictにおいてはshuffleとrepeatはいらない
         '''
-        dataset = tf.data.Dataset.from_tensor_slices((filenames, labels))
+        if labels is None:
+            inputs = filenames
+        else:
+            inputs = (filenames, labels)
+
+        dataset = tf.data.Dataset.from_tensor_slices(inputs)
 
         # 生の画像を読み込んだ状態なので、TFで扱えるように1画像ずつパース
         dataset = dataset.map(self._parse)
+
+        #dataset = dataset.shuffle(8000)
 
         # バッチサイズを指定する
         dataset = dataset.batch(self.batch_size)

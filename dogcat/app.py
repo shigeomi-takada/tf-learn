@@ -17,6 +17,7 @@ TensorFlowのドキュメントで紹介されているCNN例
 '''
 
 import cv2 as cv
+import uuid
 import numpy as np
 import tensorflow as tf
 from input import Input
@@ -102,9 +103,9 @@ def cnn_model_fn(features, labels, mode):
     # loss = tf.reduce_mean(
     #    tf.losses.sparse_softmax_cross_entropy(labels, logits))
 
-    # 2値分類の場合はhinge_lossが良い
+    # 2値分類の場合はhinge_lossまたは sigmoid_cross_entropy が良い
     loss = tf.reduce_mean(
-        tf.losses.softmax_cross_entropy(onehot_labels, logits))
+        tf.losses.sigmoid_cross_entropy(onehot_labels, logits))
 
     if mode == tf.estimator.ModeKeys.TRAIN:
         # オプティマイザー。最適なモデルのパラメータを見つけるためのアルゴリズム
@@ -130,12 +131,13 @@ def cnn_model_fn(features, labels, mode):
 
 def main(unused_argv=None):
 
-    model_dir = '../models/dogcat'
+    # 毎回チェックポイントデータを消すのは面倒なので、保存ディレクトリを実行ごとに生成する
+    model_dir = '../models/dogcat/' + str(uuid.uuid1()).split('-')[0]
 
     input = Input()
 
     data = input.get()
-
+    model_dir = '../models/dogcat/'
     # Estimatorのインスタンス化
     classifier = tf.estimator.Estimator(
         model_fn=cnn_model_fn, model_dir=model_dir)
@@ -143,18 +145,45 @@ def main(unused_argv=None):
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log, every_n_iter=50)
-
+    '''
     # train
     classifier.train(
         input_fn=lambda:input.input_fn(data['train_fnames'], data['train_labels']),
-        steps=4000,
+        steps=20000,
         hooks=[logging_hook])
 
     # eval
     eval_results = classifier.evaluate(
-        input_fn=lambda:input.eval_input_fn(data['val_fnames'], data['val_labels']))
+        input_fn=lambda:input.eval_input_fn(data['val_fnames'], data['val_labels']),
+        steps=1000,
+        hooks=[logging_hook])
 
     print(eval_results)
+    '''
+
+    # Predict
+    '''
+    predictメソッドの返り値例
+    74行目くらいで指定した通りの値が返る
+    {'classes': 1, 'probabilities': array([0.04826169, 0.9517383 ], dtype=float32)}
+    '''
+
+    data = {
+        'test_fnames': ['../datasets/tmp/c.jpg'],
+        'test_labels': [0]
+    }
+
+    predictions = classifier.predict(
+        input_fn=lambda:input.eval_input_fn(data['test_fnames']))
+
+    print('0: Cat, 1: Dog')
+    for i, pred in enumerate(predictions):
+        print('File: {0}, 予想: {1}, 正解: {2}, 確率: {3}%, {4}'.format(
+            data['test_fnames'][i].split('/')[-1],
+            pred['classes'],
+            data['test_labels'][i],
+            round(np.max(pred['probabilities']) * 100),
+            '正' if pred['classes'] == data['test_labels'][i] else '誤'))
 
 
 if __name__ == '__main__':
